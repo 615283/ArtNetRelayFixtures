@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.georlegacy.general.artnetrelayfixtures</groupId>
+    <artifactId>ArtNetRelayFixtures</artifactId>
+    <version>0.0.0.1-DEV</version>
+
+    <name>${artifactId}</name>
+
+    <build>
+        <resources>
+            <resource>
+                <targetPath>.</targetPath>
+                <filtering>true</filtering>
+                <directory>${basedir}/src/main/resources</directory>
+                <includes>
+
+                </includes>
+            </resource>
+        </resources>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>ch.buildspur</groupId>
+            <artifactId>artnet4j</artifactId>
+            <scope>system</scope>
+            <version>0.4.0</version>
+            <systemPath>${project.basedir}/src/main/resources/artnet4j.jar</systemPath>
+        </dependency>
+    </dependencies>
+
+</project>

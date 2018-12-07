@@ -1,0 +1,6 @@
+.gitattributes
+target
+*.iml
+.idea
+*.jar
+*.priv
