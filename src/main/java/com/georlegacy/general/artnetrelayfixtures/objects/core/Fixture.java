@@ -1,57 +1,55 @@
 package com.georlegacy.general.artnetrelayfixtures.objects.core;
 
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+
 import java.io.Serializable;
 
 public class Fixture implements Serializable {
 
     static final long serialUid = 40L;
 
-    private String name;
-    private short dmxChannel;
-    private short dmxUniverse;
-    private short voltage;
+    private SimpleStringProperty name;
+    private SimpleIntegerProperty dmxChannel;
+    private SimpleIntegerProperty dmxUniverse;
 
     public Fixture(String name) {
-        this.name = name;
+        this.name = new SimpleStringProperty();
+        this.dmxChannel = new SimpleIntegerProperty();
+        this.dmxUniverse = new SimpleIntegerProperty();
+
+        if (name != null)
+            this.name.set(name);
     }
 
     public boolean isConfigured() {
-        return dmxChannel != 0 &&
-                dmxUniverse != 0 &&
-                voltage != 0;
+        return dmxChannel.get() != 0 &&
+                dmxUniverse.get() != 0;
     }
 
     public String getName() {
-        return name;
+        return name.get();
     }
 
-    public short getDmxChannel() {
-        return dmxChannel;
+    public int getDmxChannel() {
+        return dmxChannel.get();
     }
 
-    public short getDmxUniverse() {
-        return dmxUniverse;
-    }
-
-    public short getVoltage() {
-        return voltage;
+    public int getDmxUniverse() {
+        return dmxUniverse.get();
     }
 
 
     public void setName(String name) {
-        this.name = name;
+        this.name.set(name);
     }
 
     public void setDmxChannel(short dmxChannel) {
-        this.dmxChannel = dmxChannel;
+        this.dmxChannel.set(dmxChannel);
     }
 
     public void setDmxUniverse(short dmxUniverse) {
-        this.dmxUniverse = dmxUniverse;
-    }
-
-    public void setVoltage(short voltage) {
-        this.voltage = voltage;
+        this.dmxUniverse.set(dmxUniverse);
     }
 
 }
