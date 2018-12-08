@@ -23,8 +23,9 @@ public class Fixture implements Serializable {
     }
 
     public boolean isConfigured() {
-        return dmxChannel.get() != 0 &&
-                dmxUniverse.get() != 0;
+        return dmxChannel.get() > 0 &&
+                dmxChannel.get() <= 512 &&
+                dmxUniverse.get() > 0;
     }
 
     public String getName() {
@@ -44,11 +45,11 @@ public class Fixture implements Serializable {
         this.name.set(name);
     }
 
-    public void setDmxChannel(short dmxChannel) {
+    public void setDmxChannel(int dmxChannel) {
         this.dmxChannel.set(dmxChannel);
     }
 
-    public void setDmxUniverse(short dmxUniverse) {
+    public void setDmxUniverse(int dmxUniverse) {
         this.dmxUniverse.set(dmxUniverse);
     }
 

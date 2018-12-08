@@ -5,6 +5,9 @@ import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -31,7 +34,7 @@ public class Main extends Application {
 
         final TableView<Fixture> fixtureTable = new TableView<Fixture>();
 
-        fixtureTable.setItems(FXCollections.observableArrayList(new Fixture("test")));
+        fixtureTable.setItems(FXCollections.observableArrayList(new Fixture("Example Fixture")));
 
         fixtureTable.setEditable(false);
         TableColumn fixtureNameColumn = new TableColumn("Fixture Name");
@@ -42,6 +45,8 @@ public class Main extends Application {
         channelColumn.setCellValueFactory(new PropertyValueFactory<Fixture, Integer>("dmxChannel"));
         fixtureTable.getColumns().addAll(fixtureNameColumn, universeColumn, channelColumn);
 
+        fixtureTable.setPlaceholder(new Label("There are currently no fixtures, add one below."));
+
         fixtureTable.setRowFactory(new Callback<TableView<Fixture>, TableRow<Fixture>>() {
             @Override
             public TableRow<Fixture> call(TableView<Fixture> param) {
@@ -50,7 +55,7 @@ public class Main extends Application {
                     protected void updateItem(Fixture item, boolean empty) {
                         super.updateItem(item, empty);
                         if (item != null) {
-                            if (item.getDmxChannel() == 0 || item.getDmxUniverse() == 0) {
+                            if (item.getDmxChannel() == 0 || item.getDmxUniverse() == 0 || item.getDmxChannel() > 512) {
                                 setBackground(new Background(new BackgroundFill(Color.RED, CornerRadii.EMPTY, Insets.EMPTY)));
                             }
                         }
@@ -59,40 +64,81 @@ public class Main extends Application {
             }
         });
 
-        final ListView<Fixture> fixtureList = new ListView<Fixture>();
-
         final Button deleteFixtureButton = new Button();
         deleteFixtureButton.setText("Delete Fixture");
+        deleteFixtureButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                fixtureTable.getItems().remove(fixtureTable.getSelectionModel().getSelectedItem());
+                deleteFixtureButton.setVisible(false);
+            }
+        });
         deleteFixtureButton.setVisible(false);
 
         final Button configureFixtureButton = new Button();
         configureFixtureButton.setText("Configure Fixture");
-        configureFixtureButton.setVisible(false);
+        configureFixtureButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                Stage fixtureConfigurationStage = new Stage();
+                Fixture fixture = fixtureTable.getSelectionModel().selectedItemProperty().get();
+                fixtureConfigurationStage.setTitle("Configure Fixture \"" +
+                        fixture.getName() + "\"");
 
-        fixtureList.setItems(FXCollections.<Fixture>observableArrayList(new Fixture("Test Fixture")));
-        fixtureList.setCellFactory(new Callback<ListView<Fixture>, ListCell<Fixture>>() {
-            public ListCell<Fixture> call(ListView<Fixture> param) {
-                final Label leadLabel = new Label();
-                final Tooltip tooltip = new Tooltip();
-                final ListCell<Fixture> cell = new ListCell<Fixture>() {
+                VBox root = new VBox();
+                root.setAlignment(Pos.CENTER);
+                Label alertLabel = new Label("No Alerts To Show.");
+                alertLabel.setVisible(false);
+                Label nameLabel = new Label("Fixture Name");
+                TextField nameField = new TextField(fixture.getName());
+                Label universeLabel = new Label("DMX Universe");
+                TextField universeField = new TextField(String.valueOf(fixture.getDmxUniverse()));
+                Label channelLabel = new Label("DMX Channel");
+                TextField channelField = new TextField(String.valueOf(fixture.getDmxChannel()));
+
+                HBox buttons = new HBox();
+                buttons.setAlignment(Pos.CENTER);
+                Button saveButton = new Button("Save");
+                saveButton.setOnAction(new EventHandler<ActionEvent>() {
                     @Override
-                    protected void updateItem(Fixture item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (item != null) {
-                            leadLabel.setText(item.getName());
-                            setText(item.getName() + String.format(" (%d)", item.getDmxChannel()));
-                            if (!item.isConfigured())
-                                setBackground(new Background(new BackgroundFill(Color.RED, CornerRadii.EMPTY, Insets.EMPTY)));
-                            tooltip.setText(item.isConfigured() ? "" : "This fixture needs configuring!");
-                            setTooltip(tooltip);
+                    public void handle(ActionEvent event) {
+                        fixture.setName(nameField.getText());
+                        alertLabel.setVisible(false);
+                        try {
+                            fixture.setDmxUniverse(Integer.parseInt(universeField.getText()));
+                            fixture.setDmxChannel(Integer.parseInt(channelField.getText()));
+                            fixtureConfigurationStage.close();
+                            configureFixtureButton.setVisible(false);
+                            fixtureTable.refresh();
+                        } catch (NumberFormatException ex) {
+                            alertLabel.setText("Universe and Channel fields need to be integers.");
+                            alertLabel.setVisible(true);
                         }
                     }
-                };
-                return cell;
+                });
+                Button cancelButton = new Button("Cancel");
+                cancelButton.setOnAction(new EventHandler<ActionEvent>() {
+                    @Override
+                    public void handle(ActionEvent event) {
+                        fixtureConfigurationStage.close();
+                        configureFixtureButton.setVisible(false);
+                    }
+                });
+                buttons.getChildren().addAll(saveButton, cancelButton);
+
+                root.getChildren().addAll(alertLabel, nameLabel, nameField, universeLabel, universeField, channelLabel,
+                        channelField, buttons);
+                fixtureConfigurationStage.setScene(new Scene(root, 300, 300));
+                fixtureConfigurationStage.show();
             }
         });
-        fixtureList.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Fixture>() {
-            public void changed(ObservableValue<? extends Fixture> observable, Fixture oldValue, Fixture newValue) {
+        configureFixtureButton.setVisible(false);
+
+        fixtureTable.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null) {
+                deleteFixtureButton.setVisible(false);
+                configureFixtureButton.setVisible(false);
+            } else {
                 deleteFixtureButton.setVisible(true);
                 configureFixtureButton.setVisible(true);
             }
@@ -103,6 +149,12 @@ public class Main extends Application {
         newFixtureNameInput.setPromptText("Fresnel DSL 2");
         final Button addFixtureButton = new Button();
         addFixtureButton.setText("Add Fixture");
+        addFixtureButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                fixtureTable.getItems().add(new Fixture(newFixtureNameInput.getText()));
+            }
+        });
         fixtureAdditionDeletionBox.getChildren().add(newFixtureNameInput);
         fixtureAdditionDeletionBox.getChildren().add(addFixtureButton);
 
