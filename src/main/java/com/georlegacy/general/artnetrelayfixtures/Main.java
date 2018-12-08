@@ -1,17 +1,17 @@
 package com.georlegacy.general.artnetrelayfixtures;
 
+import com.georlegacy.general.artnetrelayfixtures.objects.core.Fixture;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
 public class Main extends Application {
 
@@ -20,15 +20,36 @@ public class Main extends Application {
 
         VBox fixtureManagement = new VBox();
 
-        final ListView<String> fixtureList = new ListView<String>();
+        final ListView<Fixture> fixtureList = new ListView<Fixture>();
 
         final Button deleteFixtureButton = new Button();
         deleteFixtureButton.setText("Delete Fixture");
         deleteFixtureButton.setVisible(false);
 
-        fixtureList.setItems(FXCollections.<String>observableArrayList("Test Fixture 1", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2", "Test Fixture 2"));
-        fixtureList.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+        fixtureList.setItems(FXCollections.<Fixture>observableArrayList(new Fixture("Test Fixture")));
+        fixtureList.setCellFactory(new Callback<ListView<Fixture>, ListCell<Fixture>>() {
+            public ListCell<Fixture> call(ListView<Fixture> param) {
+                final Label leadLabel = new Label();
+                final Tooltip tooltip = new Tooltip();
+                final ListCell<Fixture> cell = new ListCell<Fixture>() {
+                    @Override
+                    protected void updateItem(Fixture item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item != null) {
+                            leadLabel.setText(item.getName());
+                            setText(item.getName() + String.format(" (%d)", item.getDmxChannel()));
+                            if (!item.isConfigured())
+                                setBackground(new Background(new BackgroundFill(Color.RED, CornerRadii.EMPTY, Insets.EMPTY)));
+                            tooltip.setText(item.isConfigured() ? "" : "This fixture needs configuring!");
+                            setTooltip(tooltip);
+                        }
+                    }
+                };
+                return cell;
+            }
+        });
+        fixtureList.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Fixture>() {
+            public void changed(ObservableValue<? extends Fixture> observable, Fixture oldValue, Fixture newValue) {
                 deleteFixtureButton.setVisible(true);
             }
         });
