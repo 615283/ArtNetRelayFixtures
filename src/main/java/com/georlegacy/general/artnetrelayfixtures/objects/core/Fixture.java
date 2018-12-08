@@ -3,15 +3,36 @@ package com.georlegacy.general.artnetrelayfixtures.objects.core;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 public class Fixture implements Serializable {
 
     static final long serialUid = 40L;
 
-    private SimpleStringProperty name;
-    private SimpleIntegerProperty dmxChannel;
-    private SimpleIntegerProperty dmxUniverse;
+    private transient SimpleStringProperty name;
+    private transient SimpleIntegerProperty dmxChannel;
+    private transient SimpleIntegerProperty dmxUniverse;
+
+    private String srName;
+    private int srDmxChannel;
+    private int srDmxUniverse;
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        name = new SimpleStringProperty(srName);
+        dmxChannel = new SimpleIntegerProperty(srDmxChannel);
+        dmxUniverse = new SimpleIntegerProperty(srDmxUniverse);
+    }
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        srName = name.get();
+        srDmxChannel = dmxChannel.get();
+        srDmxUniverse = dmxUniverse.get();
+        out.defaultWriteObject();
+    }
 
     public Fixture(String name) {
         this.name = new SimpleStringProperty();

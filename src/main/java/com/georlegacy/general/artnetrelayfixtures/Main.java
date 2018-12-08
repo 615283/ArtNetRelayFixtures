@@ -1,5 +1,6 @@
 package com.georlegacy.general.artnetrelayfixtures;
 
+import com.georlegacy.general.artnetrelayfixtures.objects.core.ArtNetRelayFixturesDataStore;
 import com.georlegacy.general.artnetrelayfixtures.objects.core.Fixture;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
@@ -18,8 +19,28 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+import java.io.IOException;
+
 @SuppressWarnings("unchecked")
 public class Main extends Application {
+
+    private final ArtNetRelayFixturesDataStore dataStore;
+
+    public Main() {
+        dataStore = ArtNetRelayFixturesDataStore.load();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            dataStore.getFixtures().clear();
+            dataStore.getFixtures().addAll(fixtureTable.getItems());
+            dataStore.save();
+        }));
+        try {
+            Runtime.getRuntime().exec("cmd /c assoc .anrf=ArtNet Relay Fixtures Data Store");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private final TableView<Fixture> fixtureTable = new TableView<Fixture>();
 
     public void start(Stage primaryStage) {
 //        ArtNetClient client = new ArtNetClient();
@@ -32,9 +53,8 @@ public class Main extends Application {
         VBox fixtureManagement = new VBox();
 
 
-        final TableView<Fixture> fixtureTable = new TableView<Fixture>();
 
-        fixtureTable.setItems(FXCollections.observableArrayList(new Fixture("Example Fixture")));
+        fixtureTable.setItems(FXCollections.observableArrayList(dataStore.getFixtures()));
 
         fixtureTable.setEditable(false);
         TableColumn fixtureNameColumn = new TableColumn("Fixture Name");
