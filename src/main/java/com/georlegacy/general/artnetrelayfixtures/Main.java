@@ -1,33 +1,53 @@
 package com.georlegacy.general.artnetrelayfixtures;
 
+import ch.bildspur.artnet.ArtNetClient;
 import com.georlegacy.general.artnetrelayfixtures.objects.core.ArtNetRelayFixturesDataStore;
 import com.georlegacy.general.artnetrelayfixtures.objects.core.Fixture;
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
+import javafx.concurrent.ScheduledService;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.*;
+import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import javafx.util.Duration;
 
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.MenuItem;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 @SuppressWarnings("unchecked")
 public class Main extends Application {
 
     private final ArtNetRelayFixturesDataStore dataStore;
+    private final ScheduledExecutorService scheduledExecutorService;
 
     public Main() {
         dataStore = ArtNetRelayFixturesDataStore.load();
+        scheduledExecutorService = Executors.newScheduledThreadPool(1);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             dataStore.getFixtures().clear();
             dataStore.getFixtures().addAll(fixtureTable.getItems());
@@ -35,6 +55,7 @@ public class Main extends Application {
         }));
         try {
             Runtime.getRuntime().exec("cmd /c assoc .anrf=ArtNet Relay Fixtures Data Store");
+            Runtime.getRuntime().exec("reg add hkcr\\ArtNet Relay Fixtures Data Store\\DefaultIcon /ve /d D:\\anrf.ico");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -43,15 +64,13 @@ public class Main extends Application {
     private final TableView<Fixture> fixtureTable = new TableView<Fixture>();
 
     public void start(Stage primaryStage) {
-//        ArtNetClient client = new ArtNetClient();
-//        client.start();
-//        System.out.println(Arrays.toString(client.readDmxData(0, 1)));
+        ArtNetClient client = new ArtNetClient();
+        client.start();
 
 
         BorderPane rootPane = new BorderPane();
 
         VBox fixtureManagement = new VBox();
-
 
 
         fixtureTable.setItems(FXCollections.observableArrayList(dataStore.getFixtures()));
@@ -70,7 +89,7 @@ public class Main extends Application {
         fixtureTable.setRowFactory(new Callback<TableView<Fixture>, TableRow<Fixture>>() {
             @Override
             public TableRow<Fixture> call(TableView<Fixture> param) {
-                return new TableRow<Fixture>(){
+                return new TableRow<Fixture>() {
                     @Override
                     protected void updateItem(Fixture item, boolean empty) {
                         super.updateItem(item, empty);
@@ -179,7 +198,6 @@ public class Main extends Application {
         fixtureAdditionDeletionBox.getChildren().add(addFixtureButton);
 
         fixtureManagement.getChildren().add(fixtureTable);
-        //fixtureManagement.getChildren().add(fixtureList);
         fixtureManagement.getChildren().add(fixtureAdditionDeletionBox);
         fixtureManagement.getChildren().add(deleteFixtureButton);
         fixtureManagement.getChildren().add(configureFixtureButton);
@@ -188,11 +206,131 @@ public class Main extends Application {
         controlButtons.setAlignment(Pos.BOTTOM_CENTER);
         Button openCurrentDMXInPanelButton = new Button();
         openCurrentDMXInPanelButton.setText("Current DMX Input");
+        openCurrentDMXInPanelButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                Stage currentDMXInPanelStage = new Stage();
+                currentDMXInPanelStage.setTitle("Current DMX Input");
+                StackPane root = new StackPane();
+                VBox universeDisplays = new VBox();
+                FlowPane universe1 = new FlowPane();
+                int i = 0;
+                for (byte b : client.readDmxData(0, 1)) {
+                    i++;
+                    int data = (int) b >= 0 ? (int) b : 256 + (int) b;
+                    Label channel = new Label(String.format("  %d  ", data));
+                    channel.setId(String.valueOf(i));
+                    channel.setBackground(new Background(new BackgroundFill(data != 0 ?
+                            Color.BLACK : Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+                    channel.setTextFill(data != 0 ? Color.WHITE : Color.BLACK);
+                    universe1.getChildren().add(channel);
+                }
+                ScheduledService<Void> service = new ScheduledService<Void>() {
+                    @Override
+                    protected Task<Void> createTask() {
+                        return new Task<Void>() {
+                            @Override
+                            protected Void call() throws Exception {
+                                try {
+                                    for (Node node : universe1.getChildren()) {
+                                        Label channel = (Label) node;
+                                        int id = Integer.parseInt(channel.getId());
+                                        byte[] rawData = client.readDmxData(0, 1);
+                                        int channelData = (int) rawData[id - 1] >= 0 ? (int) rawData[id - 1] : 256 + (int) rawData[id - 1];
+                                        Platform.runLater(() ->
+                                                channel.setText(String.format("  %d  ", channelData)));
+                                        channel.setBackground(new Background(new BackgroundFill(channelData != 0 ?
+                                                Color.BLACK : Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+                                        channel.setTextFill(channelData != 0 ? Color.WHITE : Color.BLACK);
+                                    }
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                                return null;
+                            }
+                        };
+                    }
+                };
+                service.setPeriod(Duration.millis(100));
+                service.start();
+                universeDisplays.getChildren().add(universe1);
+                root.getChildren().add(universeDisplays);
+                currentDMXInPanelStage.setScene(new Scene(root, 400, 500));
+                currentDMXInPanelStage.setOnCloseRequest(ev -> service.cancel());
+                currentDMXInPanelStage.show();
+            }
+        });
         controlButtons.getChildren().add(openCurrentDMXInPanelButton);
 
-        Button hideInterfaceButton = new Button();
-        hideInterfaceButton.setText("Hide Interface");
-        controlButtons.getChildren().add(hideInterfaceButton);
+        if (SystemTray.isSupported()) {
+            Platform.setImplicitExit(false);
+
+            EventHandler closeHandler = event -> {
+                Platform.runLater(primaryStage::hide);
+
+                TrayIcon trayIcon = null;
+                Image img = null;
+                try {
+                    img = ImageIO.read(Main.class.getClassLoader().getResourceAsStream("anrf_white.png"));
+                    img = img.getScaledInstance(16, 16, 0);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                PopupMenu menu = new PopupMenu();
+                menu.setName("ANRF Popup");
+                MenuItem header = new MenuItem("ArtNet Relay Fixtures");
+                header.setEnabled(false);
+                MenuItem showItem = new MenuItem("Open");
+                showItem.addActionListener(e -> {
+                    Platform.runLater(primaryStage::show);
+
+                    Optional<TrayIcon> optionalTrayIcon = Arrays.stream(SystemTray.getSystemTray().getTrayIcons())
+                            .filter(ti -> ti.getPopupMenu().getName().equals("ANRF Popup")).findFirst();
+                    optionalTrayIcon.ifPresent(trayIcon1 -> SystemTray.getSystemTray().remove(trayIcon1));
+                });
+                MenuItem quitItem = new MenuItem("Quit");
+                quitItem.addActionListener(ev -> {
+                    System.exit(0);
+                    Optional<TrayIcon> optionalTrayIcon = Arrays.stream(SystemTray.getSystemTray().getTrayIcons())
+                            .filter(ti -> ti.getPopupMenu().getName().equals("ANRF Popup")).findFirst();
+                    optionalTrayIcon.ifPresent(trayIcon1 -> SystemTray.getSystemTray().remove(trayIcon1));
+                });
+                menu.add(header);
+                menu.addSeparator();
+                menu.add(showItem);
+                menu.add(quitItem);
+                trayIcon = new TrayIcon(Objects.requireNonNull(img), "ArtNet Relay Fixtures", menu);
+                trayIcon.addMouseListener(new MouseListener() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        if (SwingUtilities.isLeftMouseButton(e)) {
+                            Platform.runLater(primaryStage::show);
+
+                            Optional<TrayIcon> optionalTrayIcon = Arrays.stream(SystemTray.getSystemTray().getTrayIcons())
+                                    .filter(ti -> ti.getPopupMenu().getName().equals("ANRF Popup")).findFirst();
+                            optionalTrayIcon.ifPresent(trayIcon1 -> SystemTray.getSystemTray().remove(trayIcon1));
+                        }
+                    }
+
+                    @Override public void mousePressed(MouseEvent e) { }
+                    @Override public void mouseReleased(MouseEvent e) { }
+                    @Override public void mouseEntered(MouseEvent e) { }
+                    @Override public void mouseExited(MouseEvent e) { }
+                });
+                try {
+                    SystemTray.getSystemTray().add(trayIcon);
+                } catch (AWTException e) {
+                    e.printStackTrace();
+                }
+            };
+
+            primaryStage.setOnCloseRequest(closeHandler);
+
+            Button hideInterfaceButton = new Button();
+            hideInterfaceButton.setText("Hide Interface");
+            hideInterfaceButton.setOnAction(closeHandler);
+            controlButtons.getChildren().add(hideInterfaceButton);
+        }
 
         Button openSettingsPanelButton = new Button();
         openSettingsPanelButton.setText("Settings");

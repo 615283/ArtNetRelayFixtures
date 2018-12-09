@@ -23,7 +23,9 @@
                 <filtering>true</filtering>
                 <directory>${basedir}/src/main/resources</directory>
                 <includes>
-
+                    <include>anrf.png</include>
+                    <include>anrf_white.png</include>
+                    <include>anrf.ico</include>
                 </includes>
             </resource>
         </resources>
